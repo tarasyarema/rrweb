@@ -177,10 +177,10 @@ export function SessionList() {
         header: 'Created Time',
         sortDescFirst: true,
       }),
-      columnHelper.accessor((row) => row.recorderVersion, {
-        cell: (info) => info.getValue(),
-        header: 'RRWEB Version',
-      }),
+      // columnHelper.accessor((row) => row.recorderVersion, {
+      //   cell: (info) => info.getValue(),
+      //   header: 'RRWEB Version',
+      // }),
     ],
     [sessions],
   );
@@ -251,25 +251,27 @@ export function SessionList() {
   };
 
   return (
-    <>
-      <Flex justify="flex-end" mb={4}>
-        <Button
-          onClick={() => {
-            fileInputRef.current?.click();
-          }}
-          size="sm"
-          m={4}
-        >
-          Import Session
-        </Button>
-        <input
-          type="file"
-          accept="application/json"
-          ref={fileInputRef}
-          style={{ display: 'none' }}
-          onChange={handleFileUpload}
-        />
-      </Flex>
+    <Box>
+      {false && (
+        <Flex justify="flex-end" mb={4}>
+          <Button
+            onClick={() => {
+              fileInputRef.current?.click();
+            }}
+            size="sm"
+            m={4}
+          >
+            Import Session
+          </Button>
+          <input
+            type="file"
+            accept="application/json"
+            ref={fileInputRef}
+            style={{ display: 'none' }}
+            onChange={handleFileUpload}
+          />
+        </Flex>
+      )}
       <TableContainer fontSize="md">
         <Table variant="simple">
           <Thead>
@@ -452,6 +454,6 @@ export function SessionList() {
           )}
         </Flex>
       </Flex>
-    </>
+    </Box>
   );
 }

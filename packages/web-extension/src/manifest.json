@@ -1,10 +1,14 @@
 {
   "common": {
-    "name": "rrweb",
+    "name": "desplega.ai",
     "content_scripts": [
       {
-        "matches": ["<all_urls>"],
-        "js": ["content/index.ts"],
+        "matches": [
+          "<all_urls>"
+        ],
+        "js": [
+          "content/index.ts"
+        ],
         "all_frames": true,
         "run_at": "document_idle"
       }
@@ -14,17 +18,23 @@
       "48": "icon48.png",
       "128": "icon128.png"
     },
-    "permissions": ["activeTab", "storage", "unlimitedStorage"]
+    "permissions": [
+      "activeTab",
+      "storage",
+      "unlimitedStorage"
+    ]
   },
   "v2": {
     "common": {
       "manifest_version": 2,
       "background": {
         "persistent": false,
-        "scripts": ["background/index.ts"]
+        "scripts": [
+          "background/index.ts"
+        ]
       },
       "browser_action": {
-        "default_title": "rrweb extension",
+        "default_title": "desplega.ai extension",
         "default_popup": "popup/popup.html",
         "browser_style": false
       },
@@ -33,7 +43,9 @@
         "open_in_tab": true,
         "chrome_style": false
       },
-      "web_accessible_resources": ["**/*.js"]
+      "web_accessible_resources": [
+        "**/*.js"
+      ]
     },
     "chrome": {},
     "firefox": {
@@ -53,7 +65,7 @@
         "type": "module"
       },
       "action": {
-        "default_title": "rrweb extension",
+        "default_title": "desplega.ai extension",
         "default_popup": "popup/popup.html",
         "browser_style": false
       },
@@ -63,8 +75,12 @@
       },
       "web_accessible_resources": [
         {
-          "resources": ["**/*.js"],
-          "matches": ["<all_urls>"]
+          "resources": [
+            "**/*.js"
+          ],
+          "matches": [
+            "<all_urls>"
+          ]
         }
       ]
     },

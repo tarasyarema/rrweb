@@ -6,6 +6,23 @@ import type { Session } from '~/types';
  * Storage related functions with indexedDB.
  */
 
+const ApiKeyStoreName = 'api_keys';
+type ApiKeyData = {
+  id: string;
+  apiKey: string;
+};
+
+export async function getApiKeyStore() {
+  return openDB<ApiKeyData>(ApiKeyStoreName, 1, {
+    upgrade(db) {
+      db.createObjectStore(ApiKeyStoreName, {
+        keyPath: 'id',
+        autoIncrement: false,
+      });
+    },
+  });
+}
+
 const EventStoreName = 'events';
 type EventData = {
   id: string;
@@ -42,6 +59,22 @@ export async function getSessionStore() {
       });
     },
   });
+}
+
+export async function upsertApiKey(apiKey: string) {
+  const store = await getApiKeyStore();
+  const data = (await store.getAll(ApiKeyStoreName)) as ApiKeyData[];
+  if (data.length === 0) {
+    await store.add(ApiKeyStoreName, { id: 'api_key', apiKey });
+  } else {
+    await store.put(ApiKeyStoreName, { id: 'api_key', apiKey });
+  }
+}
+
+export async function getApiKey() {
+  const store = await getApiKeyStore();
+  const data = (await store.getAll(ApiKeyStoreName)) as ApiKeyData[];
+  return data.map((item) => item.apiKey);
 }
 
 export async function addSession(session: Session, events: eventWithTime[]) {

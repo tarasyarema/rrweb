@@ -1,4 +1,4 @@
-import { record } from 'rrweb';
+import { EventType, record } from 'rrweb';
 import type { recordOptions } from 'rrweb';
 import type { eventWithTime } from '@rrweb/types';
 import { MessageName, type RecordStartedMessage } from '~/types';
@@ -19,6 +19,10 @@ function startRecord(config: recordOptions<eventWithTime>) {
           event,
         });
       },
+      userTriggeredOnInput: true,
+      recordDOM: true,
+      recordCanvas: true,
+      recordCrossOriginIframes: true,
       ...config,
     }) || null;
   postMessage({
@@ -63,6 +67,44 @@ const messageHandler = (
 function postMessage(message: unknown) {
   if (!isInCrossOriginIFrame()) window.postMessage(message, location.origin);
 }
+
+document.addEventListener('keydown', (e) => {
+  const event: eventWithTime = {
+    timestamp: Math.floor(performance.timeOrigin + e.timeStamp),
+    type: EventType.Custom,
+    data: {
+      tag: 'custom-keydown',
+      payload: {
+        isTrusted: e.isTrusted,
+        key: e.key,
+        code: e.code,
+        location: e.location,
+        ctrlKey: e.ctrlKey,
+        shiftKey: e.shiftKey,
+        altKey: e.altKey,
+        metaKey: e.metaKey,
+        repeat: e.repeat,
+        isComposing: e.isComposing,
+        modifierState: {
+          AltGraph: e.getModifierState('AltGraph'),
+          CapsLock: e.getModifierState('CapsLock'),
+          Fn: e.getModifierState('Fn'),
+          FnLock: e.getModifierState('FnLock'),
+          NumLock: e.getModifierState('NumLock'),
+          ScrollLock: e.getModifierState('ScrollLock'),
+          Symbol: e.getModifierState('Symbol'),
+          SymbolLock: e.getModifierState('SymbolLock')
+        },
+      },
+    }
+  };
+
+  postMessage({
+    message: MessageName.EmitEvent,
+    event
+  });
+});
+
 
 window.addEventListener('message', messageHandler);
 

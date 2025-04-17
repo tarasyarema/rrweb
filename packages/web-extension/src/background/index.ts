@@ -19,7 +19,53 @@ import type {
   SyncData,
 } from '~/types';
 import { isFirefox } from '~/utils';
-import { addSession } from '~/utils/storage';
+import { addSession, getApiKey } from '~/utils/storage';
+
+// TODO(taras)
+// Set based on the environment
+// const WS_ENDPOINT = 'http://localhost:5005/recorder';
+const WS_ENDPOINT = 'https://qaforme-api-gp9he8-0d143e-168-119-139-170.traefik.me/recorder';
+
+let socket: WebSocket | null = null;
+
+async function setupWebsocket(cb: () => Promise<void>) {
+  const keys = await getApiKey();
+
+  if (keys.length === 0) {
+    console.error('API key is not set');
+    return;
+  }
+
+  if (socket && socket.readyState === WebSocket.OPEN) {
+    // Close the existing connection before creating a new one.
+    // Send end message to the server also
+    socket.send(JSON.stringify({ type: 'end' }));
+    socket.close();
+  }
+
+  const url = new URL(WS_ENDPOINT);
+  url.searchParams.set('api_key', keys[0]);
+
+  socket = new WebSocket(url.toString());
+
+  socket.onopen = function() {
+    console.log(`WebSocket connected to ${WS_ENDPOINT}`);
+
+    cb().catch((e) => {
+      console.error(`Cannot connect to the recorder server`, e);
+    });
+  };
+
+  socket.onerror = function(error) {
+    console.error(`WebSocket error: ${error.type}`);
+  };
+
+  socket.onclose = function(event) {
+    console.warn(`WebSocket closed: ${event.reason}. Reconnecting not implemented....`);
+  };
+
+  return Promise.resolve();
+}
 
 void (async () => {
   // assign default value to settings of this extension
@@ -48,35 +94,40 @@ void (async () => {
   });
 
   channel.on(EventName.StartButtonClicked, async () => {
-    if (recorderStatus.status !== RecorderStatus.IDLE) return;
-    recorderStatus = {
-      status: RecorderStatus.IDLE,
-      activeTabId: -1,
-    };
-    await Browser.storage.local.set({
-      [LocalDataKey.recorderStatus]: recorderStatus,
-    });
+    await setupWebsocket(async () => {
+      if (recorderStatus.status !== RecorderStatus.IDLE) return;
+      recorderStatus = {
+        status: RecorderStatus.IDLE,
+        activeTabId: -1,
+      };
 
-    events.length = 0; // clear events before recording
-    const tabId = await channel.getCurrentTabId();
-    if (tabId === -1) return;
+      await Browser.storage.local.set({
+        [LocalDataKey.recorderStatus]: recorderStatus,
+      });
 
-    const res = (await channel
-      .requestToTab(tabId, ServiceName.StartRecord, {})
-      .catch(async (error: Error) => {
-        recorderStatus.errorMessage = error.message;
-        await Browser.storage.local.set({
-          [LocalDataKey.recorderStatus]: recorderStatus,
-        });
-      })) as RecordStartedMessage;
-    if (!res) return;
-    Object.assign(recorderStatus, {
-      status: RecorderStatus.RECORDING,
-      activeTabId: tabId,
-      startTimestamp: res.startTimestamp,
-    });
-    await Browser.storage.local.set({
-      [LocalDataKey.recorderStatus]: recorderStatus,
+      events.length = 0; // clear events before recording
+      const tabId = await channel.getCurrentTabId();
+      if (tabId === -1) return;
+
+      socket?.send(JSON.stringify({ type: 'start' }));
+
+      const res = (await channel
+        .requestToTab(tabId, ServiceName.StartRecord, {})
+        .catch(async (error: Error) => {
+          recorderStatus.errorMessage = error.message;
+          await Browser.storage.local.set({
+            [LocalDataKey.recorderStatus]: recorderStatus,
+          });
+        })) as RecordStartedMessage;
+      if (!res) return;
+      Object.assign(recorderStatus, {
+        status: RecorderStatus.RECORDING,
+        activeTabId: tabId,
+        startTimestamp: res.startTimestamp,
+      });
+      await Browser.storage.local.set({
+        [LocalDataKey.recorderStatus]: recorderStatus,
+      });
     });
   });
 
@@ -105,6 +156,16 @@ void (async () => {
           // ignore error
         })) ?? 'new session';
     const newSession = generateSession(title);
+
+    socket?.send(JSON.stringify({
+      type: 'name',
+      data: {
+        name: `${newSession.name} at ${newSession.createTimestamp}`
+      }
+    }));
+
+    socket?.send(JSON.stringify({ type: 'end' }));
+
     await addSession(newSession, events).catch((e) => {
       recorderStatus.errorMessage = (e as { message: string }).message;
       void Browser.storage.local.set({
@@ -115,6 +176,7 @@ void (async () => {
       session: newSession,
     });
     events.length = 0;
+
   });
 
   async function pauseRecording(newStatus: RecorderStatus) {
@@ -129,6 +191,9 @@ void (async () => {
       .catch(() => {
         // ignore error
       })) as RecordStoppedMessage | undefined;
+    // TODO(taras)
+    // Not implemented in the backend
+    socket?.send(JSON.stringify({ type: 'pause' }));
     Object.assign(recorderStatus, {
       status: newStatus,
       activeTabId: -1,
@@ -158,8 +223,15 @@ void (async () => {
     events.forEach((event) => {
       event.timestamp += pausedTime;
     });
+    // TODO(taras)
+    // Not implemented in the backend
+    socket?.send(JSON.stringify({ type: 'resume' }));
     const startResponse = (await channel
-      .requestToTab(newTabId, ServiceName.StartRecord, {})
+      .requestToTab(
+        newTabId,
+        ServiceName.StartRecord,
+        {}
+      )
       .catch((e: { message: string }) => {
         recorderStatus.errorMessage = e.message;
         void Browser.storage.local.set({
@@ -193,6 +265,7 @@ void (async () => {
   });
 
   channel.on(EventName.ContentScriptEmitEvent, (data) => {
+    socket?.send(JSON.stringify({ "type": "event", "data": data }));
     events.push(data as eventWithTime);
   });
 
@@ -214,7 +287,7 @@ void (async () => {
   });
 
   // If the recording can't start on an invalid tab, resume it when the tab content is updated.
-  Browser.tabs.onUpdated.addListener(function (tabId, info) {
+  Browser.tabs.onUpdated.addListener(function(tabId, info) {
     if (info.status !== 'complete') return;
     if (
       recorderStatus.status !== RecorderStatus.PausedSwitch ||

@@ -7,7 +7,7 @@ import Player from './Player';
 export default function App() {
   return (
     <SidebarWithHeader
-      title="Sessions"
+      title="desplega.ai"
       headBarItems={[
         {
           label: 'Settings',
@@ -20,13 +20,7 @@ export default function App() {
           href: '#',
         },
       ]}
-      sideBarItems={[
-        {
-          label: 'List',
-          icon: FiList,
-          href: `#`,
-        },
-      ]}
+      sideBarItems={[]}
     >
       <Routes>
         <Route path="/" element={<SessionList />} />

@@ -1,6 +1,7 @@
 import { useState, useEffect } from 'react';
 import Browser from 'webextension-polyfill';
 import {
+  Alert,
   Box,
   Flex,
   IconButton,
@@ -16,11 +17,14 @@ import type { LocalData, Session } from '~/types';
 
 import { CircleButton } from '~/components/CircleButton';
 import { Timer } from './Timer';
+import { getApiKey } from '~/utils/storage';
 const RECORD_BUTTON_SIZE = 3;
 
 const channel = new Channel();
 
 export function App() {
+  const [canRecord, setCanRecord] = useState(false);
+
   const [status, setStatus] = useState<RecorderStatus>(RecorderStatus.IDLE);
   const [errorMessage, setErrorMessage] = useState('');
   const [startTime, setStartTime] = useState(0);
@@ -29,32 +33,60 @@ export function App() {
   useEffect(() => {
     const parseStatusData = (data: LocalData[LocalDataKey.recorderStatus]) => {
       const { status, startTimestamp, pausedTimestamp } = data;
+
       setStatus(status);
-      if (startTimestamp && pausedTimestamp)
+
+      if (startTimestamp && pausedTimestamp) {
         setStartTime(Date.now() - pausedTimestamp + startTimestamp);
-      else if (startTimestamp) setStartTime(startTimestamp);
+      } else if (startTimestamp) {
+        setStartTime(startTimestamp);
+      }
     };
+
+    async function checkApiKey() {
+      const keys = await getApiKey();
+      setCanRecord(keys.length > 0);
+    }
+
+    const interval = setInterval(() => {
+      void checkApiKey();
+    }, 2_000);
+
+    // Initial
+    void checkApiKey();
+
     void Browser.storage.local.get(LocalDataKey.recorderStatus).then((data) => {
       if (!data || !data[LocalDataKey.recorderStatus]) return;
+
       parseStatusData((data as LocalData)[LocalDataKey.recorderStatus]);
     });
+
     void Browser.storage.local.onChanged.addListener((changes) => {
       if (!changes[LocalDataKey.recorderStatus]) return;
-      const data = changes[LocalDataKey.recorderStatus]
-        .newValue as LocalData[LocalDataKey.recorderStatus];
+
+      const data = changes[LocalDataKey.recorderStatus].newValue as LocalData[LocalDataKey.recorderStatus];
+
       parseStatusData(data);
-      if (data.errorMessage) setErrorMessage(data.errorMessage);
+
+      if (data.errorMessage) {
+        setErrorMessage(data.errorMessage);
+      }
     });
+
     channel.on(EventName.SessionUpdated, (data) => {
       setNewSession((data as { session: Session }).session);
     });
+
+    return () => {
+      clearInterval(interval);
+    }
   }, []);
 
   return (
     <Flex direction="column" w={300} padding="5%">
       <Flex>
         <Text fontSize="md" fontWeight="bold">
-          RRWeb Recorder
+          desplega.ai
         </Text>
         <Spacer />
         <Stack direction="row">
@@ -84,6 +116,13 @@ export function App() {
           ticking={status === RecorderStatus.RECORDING}
         />
       )}
+      {!canRecord && (
+        <Alert variant="solid" status="warning" mt="5">
+          <Text fontSize="sm">
+            Please set your API key in the settings page to start recording.
+          </Text>
+        </Alert>
+      )}
       <Flex justify="center" gap="10" mt="5" mb="5">
         {
           <CircleButton
@@ -93,6 +132,7 @@ export function App() {
                 ? 'Start Recording'
                 : 'Stop Recording'
             }
+            disabled={canRecord}
             onClick={() => {
               if (status === RecorderStatus.IDLE)
                 void channel.emit(EventName.StartButtonClicked, {});
@@ -134,14 +174,14 @@ export function App() {
               {[RecorderStatus.PAUSED, RecorderStatus.PausedSwitch].includes(
                 status,
               ) && (
-                <FiPlay
-                  style={{
-                    paddingLeft: '0.5rem',
-                    width: '100%',
-                    height: '100%',
-                  }}
-                />
-              )}
+                  <FiPlay
+                    style={{
+                      paddingLeft: '0.5rem',
+                      width: '100%',
+                      height: '100%',
+                    }}
+                  />
+                )}
               {status === RecorderStatus.RECORDING && (
                 <FiPause
                   style={{

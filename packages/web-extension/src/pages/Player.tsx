@@ -4,9 +4,7 @@ import { useParams } from 'react-router-dom';
 import Replayer from 'rrweb-player';
 import {
   Box,
-  Breadcrumb,
-  BreadcrumbItem,
-  BreadcrumbLink,
+  Text,
   Center,
 } from '@chakra-ui/react';
 import { getEvents, getSession } from '~/utils/storage';
@@ -57,18 +55,13 @@ export default function Player() {
   }, [sessionId]);
 
   return (
-    <>
-      <Breadcrumb mb={5} fontSize="md">
-        <BreadcrumbItem>
-          <BreadcrumbLink href="#">Sessions</BreadcrumbLink>
-        </BreadcrumbItem>
-        <BreadcrumbItem>
-          <BreadcrumbLink>{sessionName}</BreadcrumbLink>
-        </BreadcrumbItem>
-      </Breadcrumb>
+    <Box>
+      <Text fontSize="2xl" mb={5}>
+        {sessionName}
+      </Text>
       <Center>
         <Box ref={playerElRef}></Box>
       </Center>
-    </>
+    </Box>
   );
 }

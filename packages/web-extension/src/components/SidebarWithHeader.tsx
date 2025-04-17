@@ -113,14 +113,6 @@ const SidebarContent = ({
       {...rest}
     >
       <Flex h="20" alignItems="center" mx="8" justify="flex-start" gap="3">
-        <Link href="https://github.com/rrweb-io/rrweb" target="_blank">
-          <Image
-            borderRadius="md"
-            boxSize="2rem"
-            src={Browser.runtime.getURL('icon128.png')}
-            alt="RRWeb Logo"
-          />
-        </Link>
         {title && (
           <Heading as="h4" size="md">
             {title}
