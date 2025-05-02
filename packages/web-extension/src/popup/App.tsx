@@ -18,7 +18,9 @@ import type { LocalData, Session } from '~/types';
 import { CircleButton } from '~/components/CircleButton';
 import { Timer } from './Timer';
 import { getApiKey } from '~/utils/storage';
+
 const RECORD_BUTTON_SIZE = 3;
+const DEV = process.env.NODE_ENV === 'development';
 
 const channel = new Channel();
 
@@ -86,7 +88,7 @@ export function App() {
     <Flex direction="column" w={300} padding="5%">
       <Flex>
         <Text fontSize="md" fontWeight="bold">
-          desplega.ai
+          {DEV ? '(DEV) ' : ''} desplega.ai
         </Text>
         <Spacer />
         <Stack direction="row">

@@ -21,10 +21,8 @@ import type {
 import { isFirefox } from '~/utils';
 import { addSession, getApiKey } from '~/utils/storage';
 
-// TODO(taras)
-// Set based on the environment
-// const WS_ENDPOINT = 'http://localhost:5005/recorder';
-const WS_ENDPOINT = 'https://qaforme-api-gp9he8-0d143e-168-119-139-170.traefik.me/recorder';
+const WS_BASE_ENDPOINT = process.env.NODE_ENV === 'development' ? 'http://localhost:5005' : 'https://qaforme-api-gp9he8-0d143e-168-119-139-170.traefik.me';
+const WS_ENDPOINT = `${WS_BASE_ENDPOINT}/recorder`;
 
 let socket: WebSocket | null = null;
 
